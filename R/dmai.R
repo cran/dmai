@@ -5,7 +5,7 @@
 #'
 #' @param .data   data.frame
 #' @param method  Method to calculate Divisia monetary aggregates index, Barnett or Hancock
-#' @param logbase base of the log to be used i.e 10 for log to the base 10 and exp(1) for natural log to be used
+#' @param logbase base of log to be used in Barnett divisia monetary aggregates index method, default is NULL or 10
 #'
 #'
 #'
@@ -69,8 +69,14 @@
 #' Data
 #'
 #' # Divisia monetary aggregates index using Barnett method
-#' DMAIBarnett <- dmai(.data = Data, method = "Barnett")
+#' DMAIBarnett <- dmai(.data = Data, method = "Barnett", logbase = NULL)
 #' DMAIBarnett
+#' DMAIBarnett1 <- dmai(.data = Data, method = "Barnett", logbase = 10)
+#' DMAIBarnett1
+#' DMAIBarnett2 <- dmai(.data = Data, method = "Barnett", logbase = 2)
+#' DMAIBarnett2
+#' DMAIBarnett3 <- dmai(.data = Data, method = "Barnett", logbase = exp(1))
+#' DMAIBarnett3
 #'
 #' # Divisia monetary aggregates index using Hancock method
 #' DMAIHancock <- dmai(.data = Data, method = "Hancock")
@@ -129,7 +135,7 @@ dmai <- function(.data, method = c("Barnett", "Hancock"), logbase = NULL){
 #' @export
 #' @rdname dmai
 
-dmai.default <- function(.data, method = c("Barnett", "Hancock"), logbase = 10){
+dmai.default <- function(.data, method = c("Barnett", "Hancock"), logbase = NULL){
   if(method == "Hancock"){
     DMAI <-
       .data %>%
@@ -154,7 +160,8 @@ dmai.default <- function(.data, method = c("Barnett", "Hancock"), logbase = 10){
   }
 
   else{
-    logbase <- ifelse(is.null(logbase) | logbase == 10, 10, exp(1))
+
+    logbase <- ifelse(test = is.null(logbase), yes = 10, no = logbase)
 
     DMAI <-
       .data %>%

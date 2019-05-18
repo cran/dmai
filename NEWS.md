@@ -1,3 +1,8 @@
+# Changes in stability Version 0.4.0 
+## Bug 
+
+* Fixed the bug in logbase argument
+
 # Changes in stability Version 0.3.0 
 ## New Features 
 

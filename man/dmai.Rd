@@ -6,14 +6,14 @@
 \title{Divisia Monetary Aggregates Index}
 \usage{
 \method{dmai}{default}(.data, method = c("Barnett", "Hancock"),
-  logbase = 10)
+  logbase = NULL)
 }
 \arguments{
 \item{.data}{data.frame}
 
 \item{method}{Method to calculate Divisia monetary aggregates index, Barnett or Hancock}
 
-\item{logbase}{base of the log to be used i.e 10 for log to the base 10 and exp(1) for natural log to be used}
+\item{logbase}{base of log to be used in Barnett divisia monetary aggregates index method, default is NULL or 10}
 }
 \value{
 Divisia Monetary Aggregates Index
@@ -58,8 +58,14 @@ Data$Date <- as.Date(paste("01", Data$Date, sep = "-"), format = "\%d-\%b-\%Y")
 Data
 
 # Divisia monetary aggregates index using Barnett method
-DMAIBarnett <- dmai(.data = Data, method = "Barnett")
+DMAIBarnett <- dmai(.data = Data, method = "Barnett", logbase = NULL)
 DMAIBarnett
+DMAIBarnett1 <- dmai(.data = Data, method = "Barnett", logbase = 10)
+DMAIBarnett1
+DMAIBarnett2 <- dmai(.data = Data, method = "Barnett", logbase = 2)
+DMAIBarnett2
+DMAIBarnett3 <- dmai(.data = Data, method = "Barnett", logbase = exp(1))
+DMAIBarnett3
 
 # Divisia monetary aggregates index using Hancock method
 DMAIHancock <- dmai(.data = Data, method = "Hancock")

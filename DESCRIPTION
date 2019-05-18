@@ -1,7 +1,7 @@
 Package: dmai
 Type: Package
 Title: Divisia Monetary Aggregates Index
-Version: 0.3.0
+Version: 0.4.0
 Authors@R: c(
               person(c("Muhammad", "Yaseen"),  email = "myaseen208@gmail.com", role = c("aut", "cre"))
             , person(c("Ahmad",  "Nadeem"),  email = "Ahmed.Nadeem@sbp.org.pk", role = c("aut", "ctb"))
@@ -22,6 +22,6 @@ Note: Department of Mathematics and Statistics, University of
         Agriculture Faisalabad, Faisalabad-Pakistan.
 Suggests: testthat
 NeedsCompilation: no
-Packaged: 2019-04-11 15:02:54 UTC; myaseen
+Packaged: 2019-05-18 17:00:23 UTC; myaseen
 Repository: CRAN
-Date/Publication: 2019-04-11 15:25:20 UTC
+Date/Publication: 2019-05-18 17:20:03 UTC
