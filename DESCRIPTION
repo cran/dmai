@@ -1,7 +1,7 @@
 Package: dmai
 Type: Package
 Title: Divisia Monetary Aggregates Index
-Version: 0.4.0
+Version: 0.5.0
 Authors@R: c(
               person(c("Muhammad", "Yaseen"),  email = "myaseen208@gmail.com", role = c("aut", "cre"))
             , person(c("Ahmad",  "Nadeem"),  email = "Ahmed.Nadeem@sbp.org.pk", role = c("aut", "ctb"))
@@ -13,15 +13,13 @@ Description: Functions to calculate Divisia monetary aggregates index as given i
 Depends: R (>= 3.1)
 Imports: dplyr, magrittr, ggplot2, stringr, tibble, tidyr
 License: GPL-2
-URL: https://github.com/myaseen208/dmai,
-        https://myaseen208.github.io/dmai/
+URL: https://github.com/myaseen208/dmai/, https://myaseen208.com/dmai/
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 6.1.1
-Note: Department of Mathematics and Statistics, University of
-        Agriculture Faisalabad, Faisalabad-Pakistan.
+RoxygenNote: 7.3.1
+Note: School of Mathematical and Statistical Sciences, Clemson
+        University, Clemson, South Carolina, USA.
 Suggests: testthat
 NeedsCompilation: no
-Packaged: 2019-05-18 17:00:23 UTC; myaseen
+Packaged: 2024-03-23 23:26:11 UTC; myaseen208
 Repository: CRAN
-Date/Publication: 2019-05-18 17:20:03 UTC
+Date/Publication: 2024-03-23 23:40:02 UTC

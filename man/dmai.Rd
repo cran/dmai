@@ -5,8 +5,7 @@
 \alias{dmai.default}
 \title{Divisia Monetary Aggregates Index}
 \usage{
-\method{dmai}{default}(.data, method = c("Barnett", "Hancock"),
-  logbase = NULL)
+\method{dmai}{default}(.data, method = c("Barnett", "Hancock"), logbase = NULL)
 }
 \arguments{
 \item{.data}{data.frame}

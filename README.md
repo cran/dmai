@@ -9,11 +9,11 @@ The **dmai** package provides functionalities to calculate Divisia monetary aggr
 
 
 ## Installation
-Use **devtools** to install the development version from Github:
+Use **remotes** to install the development version from Github:
 
-```{r}
-if(!require("devtools")) install.packages("devtools")
-devtools::install_github("myaseen208/dmai")
+```
+if(!require("remotes")) install.packages("remotes")
+remotes::install_git("myaseen208/dmai")
 ```
 
 ## License

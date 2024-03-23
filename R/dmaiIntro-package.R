@@ -1,6 +1,5 @@
 #' @name dmaiIntro
 #' @title Divisia Monetary Aggregates Index
-#' @docType package
 #' @description
 #'
 #' The \code{dmai} package provides functionalities to calculate
