@@ -1,0 +1,68 @@
+# The version and year follow the installed package (from DESCRIPTION); the package was first released in 2018
+# (version 0.1.0, CRAN, 2018-11-02).
+ver  <- if (!is.null(meta$Version)) meta$Version else utils::packageVersion("dmai")
+date <- if (!is.null(meta$Date)) meta$Date else if (!is.null(meta$`Date/Publication`)) meta$`Date/Publication` else
+  as.character(Sys.Date())
+year <- substr(date, 1L, 4L)
+bibentry(
+    bibtype     = "Manual"
+  , key         = "dmai"
+  , header      = "To cite dmai in publications use:"
+  , title       = "{dmai}: Divisia Monetary Aggregates Index"
+  , author      = c(
+        person("Muhammad", "Yaseen", email = "myaseen208@gmail.com", comment = c(ORCID = "0000-0002-5923-1714"))
+      , person("Ahmad", "Nadeem", email = "Ahmed.Nadeem@sbp.org.pk")
+      )
+  , year        = year
+  , note        = sprintf("R package version %s (first released 2018)", ver)
+  , url         = "https://CRAN.R-project.org/package=dmai"
+  , textVersion = sprintf(paste("Yaseen, M. and Nadeem, A. (%s). dmai: Divisia Monetary Aggregates Index. R package",
+                                "version %s (first released 2018). https://CRAN.R-project.org/package=dmai"), year, ver)
+  )
+bibentry(
+    bibtype     = "Article"
+  , key         = "Barnett1980"
+  , header      = "and for the methods (dmai_cite() gives the references of a single analysis):"
+  , title       = "Economic Monetary Aggregates: An Application of Index Number and Aggregation Theory"
+  , author      = c(person(c("William", "A."), "Barnett"))
+  , journal     = "Journal of Econometrics"
+  , year        = "1980"
+  , volume      = "14"
+  , number      = "1"
+  , pages       = "11--48"
+  , doi         = "10.1016/0304-4076(80)90070-6"
+  , textVersion = paste("Barnett, W. A. (1980). Economic monetary aggregates: an application of index number and",
+                      "aggregation theory. Journal of Econometrics, 14(1), 11-48.",
+                      "doi:10.1016/0304-4076(80)90070-6")
+  )
+bibentry(
+    bibtype     = "Article"
+  , key         = "Barnett1978"
+  , title       = "The User Cost of Money"
+  , author      = c(person(c("William", "A."), "Barnett"))
+  , journal     = "Economics Letters"
+  , year        = "1978"
+  , volume      = "1"
+  , number      = "2"
+  , pages       = "145--149"
+  , doi         = "10.1016/0165-1765(78)90051-4"
+  , textVersion = paste("Barnett, W. A. (1978). The user cost of money. Economics Letters, 1(2), 145-149.",
+                      "doi:10.1016/0165-1765(78)90051-4")
+  )
+bibentry(
+    bibtype     = "Article"
+  , key         = "BarnettSerletis1990"
+  , title       = paste("A Dispersion-Dependency Diagnostic Test for Aggregation Error: With Applications to",
+                      "Monetary Economics and Income Distribution")
+  , author      = c(person(c("William", "A."), "Barnett"),
+                  person(c("Apostolos"), "Serletis"))
+  , journal     = "Journal of Econometrics"
+  , year        = "1990"
+  , volume      = "43"
+  , number      = "1--2"
+  , pages       = "5--34"
+  , doi         = "10.1016/0304-4076(90)90104-2"
+  , textVersion = paste("Barnett, W. A. and Serletis, A. (1990). A dispersion-dependency diagnostic test for",
+                      "aggregation error: with applications to monetary economics and income distribution.",
+                      "Journal of Econometrics, 43(1-2), 5-34. doi:10.1016/0304-4076(90)90104-2")
+  )

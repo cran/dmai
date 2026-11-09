@@ -1,0 +1,191 @@
+---
+title: "Theory and notation"
+author: "Muhammad Yaseen"
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    toc: true
+    toc-depth: 3
+    highlight-style: pygments
+    code-tools: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Theory and notation}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+{{< include _dmai-macros.txt >}}
+
+```{r setup, include = FALSE}
+# HTML figures are drawn as PNG and kept as WebP: lossless, or lossy at quality 90 when that is less than half the
+# size. The PDF figures stay vector graphics. Any failure of magick (not installed, no WebP, or a broken
+# installation whose system libraries are missing) keeps the PNG
+webp <- function(path) {
+  if (knitr::is_latex_output() || !grepl(pattern = "[.]png$", x = path)) return(path)
+  tryCatch(
+      {
+        if (!requireNamespace("magick", quietly = TRUE) || !isTRUE(magick::magick_config()$webp)) return(path)
+        img <- magick::image_read(path)
+        out <- sub(pattern = "[.]png$", replacement = ".webp", x = path)
+        tmp <- tempfile(fileext = ".webp")
+        magick::image_write(
+            image   = img
+          , path    = out
+          , format  = "webp"
+          , quality = 100
+          , defines = c(`webp:lossless` = "true")
+          )
+        magick::image_write(image = img, path = tmp, format = "webp", quality = 90)
+        if (file.size(tmp) < file.size(out) / 2) file.copy(from = tmp, to = out, overwrite = TRUE)
+        unlink(c(path, tmp))
+        out
+      }
+    , error = function(e) path
+    )
+}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", fig.width = 7, fig.height = 4.2,
+                      dev = if (knitr::is_latex_output()) "cairo_pdf" else "ragg_png", dpi = 96,
+                      fig.process = webp)
+if (requireNamespace("dmai", quietly = TRUE)) library(dmai) else
+  pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+```
+
+# Abstract
+
+This vignette sets out the formulas of the package: the user cost of a monetary asset, the expenditure shares, the
+Divisia index in the discrete form of Tornqvist and Theil, the Fisher ideal index, the simple sum and the currency
+equivalent index, the dual user-cost price index and the Divisia second moments, with the notation used throughout.
+
+# Notation
+
+```{r notation, echo = FALSE}
+knitr::kable(
+    dmai_notation(
+        format = c("table", "path", "tex")[1]
+      )[, .(symbol = paste0("$", symbol, "$"), meaning, argument)]
+  )
+```
+
+# User costs
+
+A monetary asset gives two things: a yield and monetary services (liquidity). Barnett (1978) prices the services by
+the yield given up. With the benchmark rate $R_t$, the return on an asset that gives no monetary services, and the
+own rate $r_{it}$ of component $i$, the user cost of one unit of it held over period $t$ is
+$$
+\pi_{it} = \frac{R_t - r_{it}}{1 + R_t},
+$$
+the discounted interest forgone. The expenditure on monetary services is $E_t = \sum_i \pi_{it}x_{it}$ and the share
+of component $i$
+$$
+s_{it} = \frac{\pi_{it}x_{it}}{E_t}.
+$$
+The factor $1/(1 + R_t)$ is the same for every component and cancels in the shares. Rates may be in percent
+(`percent = TRUE`) or decimal.
+
+The user costs and shares at the first date of the simulated data:
+
+```{r first-date}
+data(money_sim)
+uc <-
+  dmai_user_cost(
+      .data     = money_sim
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    )
+uc$components[Date == min(Date)]
+```
+
+**The benchmark rate.** $R_t$ should exceed the rate of every component. With `benchmark = NULL` the package takes
+$R_t = \max_i r_{it}$, as version 0.5.0 did; the component with that rate then has a user cost of zero. With a given
+benchmark the package uses $\max(R_t, \max_i r_{it})$, the upper envelope.
+
+# Indexes
+
+All indexes are chained: each date is linked to the previous one and the links are multiplied, with $Q_1$ equal to
+`base`. With $\bar{s}_{it} = (s_{it} + s_{i,t-1})/2$:
+
+**Divisia** (`"Barnett"`). Barnett (1980) aggregates by the Divisia index, in discrete time the index of Tornqvist
+(1936) and Theil (1967):
+$$
+\log\frac{Q_t}{Q_{t-1}} = \sum_{i=1}^{n}\bar{s}_{it}\left(\log x_{it} - \log x_{i,t-1}\right).
+$$
+
+**Divisia with simple growth** (`"Hancock"`). The same shares with simple growth rates, as in version 0.5.0:
+$$
+\frac{Q_t}{Q_{t-1}} - 1 = \sum_{i=1}^{n}\bar{s}_{it}\left(\frac{x_{it}}{x_{i,t-1}} - 1\right).
+$$
+
+**Fisher ideal** (`"Fisher"`). The geometric mean of the Laspeyres and Paasche quantity indexes with the user costs
+as prices (Fisher 1922):
+$$
+\frac{Q_t}{Q_{t-1}} = \left(\frac{\boldsymbol{\pi}_{t-1}^\top\mathbf{x}_t}{\boldsymbol{\pi}_{t-1}^\top\mathbf{x}_{t-1}}
+\cdot\frac{\boldsymbol{\pi}_t^\top\mathbf{x}_t}{\boldsymbol{\pi}_t^\top\mathbf{x}_{t-1}}\right)^{1/2}.
+$$
+The Divisia (Tornqvist) and Fisher indexes are both superlative: exact for flexible aggregator functions (Diewert
+1976), and they agree closely in practice.
+
+**Simple sum** (`"SimpleSum"`). $\sum_i x_{it}$, the usual official aggregate: perfect substitutes, equal weights.
+
+**Currency equivalent** (`"CE"`). Rotemberg, Driscoll and Poterba (1995):
+$$
+CE_t = \sum_{i=1}^{n}\frac{R_t - r_{it}}{R_t}\,x_{it},
+$$
+the stock of currency that would give the same services.
+
+**Growth.** `DMAI` is $100\log(Q_t/Q_{t-1})$ for every method except `"Hancock"`, for which it is
+$100(Q_t/Q_{t-1} - 1)$. With `logbase` the logarithm is taken to that base; version 0.5.0 used base 10 by default,
+which gives $1/\log 10 \approx 0.434$ times the growth rate.
+
+**Level in money units.** $V_t = V_1 Q_t/Q_1$ with $V_1 = \sum_i x_{i1}$ (column `value`).
+
+# The dual price index
+
+By factor reversal the user-cost price of the aggregate is
+$$
+P_t = \frac{E_t}{V_t},
+$$
+so that price times quantity is the expenditure (component `price`). For the Fisher index it equals the Fisher
+price index of the user costs; for the Divisia index it is the implicit price index.
+
+# Second moments
+
+Theil (1967) reads the shares as probabilities: the Divisia growth is then the mean of the growth rates of the
+components, and their variance
+$$
+K_t = \sum_{i=1}^{n}\bar{s}_{it}\left(\Delta\log x_{it} - \kappa_t\right)^2, \qquad
+\kappa_t = \sum_{i=1}^{n}\bar{s}_{it}\,\Delta\log x_{it},
+$$
+measures how differently the components grow. Barnett and Serletis (1990) use it as a diagnostic: when it is large
+the weights matter and an aggregate with the wrong weights (the simple sum) misleads. `dmai_moments()` gives
+$100\kappa_t$, $10^4K_t$ and $100\sqrt{K_t}$, and the same for the user costs.
+
+# References
+
+Barnett, W. A. (1978). The user cost of money. *Economics Letters*, 1(2), 145--149.
+
+Barnett, W. A. (1980). Economic monetary aggregates: an application of index number and aggregation theory.
+*Journal of Econometrics*, 14(1), 11--48.
+
+Barnett, W. A. and Serletis, A. (1990). A dispersion-dependency diagnostic test for aggregation error: with
+applications to monetary economics and income distribution. *Journal of Econometrics*, 43(1--2), 5--34.
+
+Diewert, W. E. (1976). Exact and superlative index numbers. *Journal of Econometrics*, 4(2), 115--145.
+
+Fisher, I. (1922). *The Making of Index Numbers*. Houghton Mifflin, Boston.
+
+Rotemberg, J. J., Driscoll, J. C. and Poterba, J. M. (1995). Money, output, and prices: evidence from a new monetary
+aggregate. *Journal of Business and Economic Statistics*, 13(1), 67--83.
+
+Theil, H. (1967). *Economics and Information Theory*. North-Holland, Amsterdam.
+
+Tornqvist, L. (1936). The Bank of Finland's consumption price index. *Bank of Finland Monthly Bulletin*, 10, 1--8.

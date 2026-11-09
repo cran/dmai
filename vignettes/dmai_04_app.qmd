@@ -1,0 +1,156 @@
+---
+title: "The application"
+author: "Muhammad Yaseen"
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    toc: true
+    toc-depth: 3
+    highlight-style: pygments
+    code-tools: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{The application}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+{{< include _dmai-macros.txt >}}
+
+```{r setup, include = FALSE}
+# HTML figures are drawn as PNG and kept as WebP: lossless, or lossy at quality 90 when that is less than half the
+# size. The PDF figures stay vector graphics. Any failure of magick (not installed, no WebP, or a broken
+# installation whose system libraries are missing) keeps the PNG
+webp <- function(path) {
+  if (knitr::is_latex_output() || !grepl(pattern = "[.]png$", x = path)) return(path)
+  tryCatch(
+      {
+        if (!requireNamespace("magick", quietly = TRUE) || !isTRUE(magick::magick_config()$webp)) return(path)
+        img <- magick::image_read(path)
+        out <- sub(pattern = "[.]png$", replacement = ".webp", x = path)
+        tmp <- tempfile(fileext = ".webp")
+        magick::image_write(
+            image   = img
+          , path    = out
+          , format  = "webp"
+          , quality = 100
+          , defines = c(`webp:lossless` = "true")
+          )
+        magick::image_write(image = img, path = tmp, format = "webp", quality = 90)
+        if (file.size(tmp) < file.size(out) / 2) file.copy(from = tmp, to = out, overwrite = TRUE)
+        unlink(c(path, tmp))
+        out
+      }
+    , error = function(e) path
+    )
+}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", fig.width = 7, fig.height = 4.2,
+                      dev = if (knitr::is_latex_output()) "cairo_pdf" else "ragg_png", dpi = 96,
+                      fig.process = webp)
+if (requireNamespace("dmai", quietly = TRUE)) library(dmai) else
+  pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+```
+
+# Abstract
+
+`dmai_app()` opens an application in the web browser that computes monetary aggregates without code: the data and
+its columns, one index with its weights and user costs, every method side by side, the user costs and the Divisia
+second moments. This vignette describes its pages and how it keeps its results reproducible.
+
+# Starting the application
+
+```{r launch, eval = FALSE}
+dmai_app(
+    launch.browser = TRUE
+  )
+```
+
+The application needs the suggested packages **shiny**, **bslib** and **DT**. **magick** with WebP support is
+optional: with it the plots are sent to the browser as WebP images, smaller than the same PNG.
+
+# The pages
+
+| Page | What it does |
+|---|---|
+| Home | what the application does and the order of the pages |
+| Data | the simulated example `money_sim` or a CSV file with one row per date; the date, quantity and rate columns (in the same order), the benchmark rate (a column, or the largest component rate) and whether the rates are in percent |
+| Index | one method (Divisia, Divisia with simple growth, Fisher, simple sum, currency equivalent), the value at the first date and the logarithm of the growth; interpretation, plot, table, printed output and R code |
+| Compare | the chosen methods side by side, as indexes or growth rates |
+| User costs | the user cost and weight of every component over time |
+| Second moments | the Divisia variance of the growth of the components |
+| References | the articles behind the methods, as `dmai_cite()` prints them |
+
+Every result page has the same tabs:
+
+* **Interpretation** gives the plain-language reading of `dmai_interpret()`, with a button that copies it.
+* **Plot** shows the figure, which can be saved as PNG, PDF or WebP.
+* **Table** shows the numbers, rounded, in a sortable table with buttons to copy them or save them as CSV or Excel.
+* **Output** shows the printed result as text, with a button that copies it.
+
+The index page has a further tab, **R code**, with the code that reproduces the result outside the application.
+
+The index page after the Divisia aggregate of `money_sim` with the bond yield `rb` as benchmark:
+
+```{r shot-index, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(path = if (knitr::is_latex_output()) "figures/app-index.jpg" else "figures/app-index.webp")
+```
+
+its plot, the aggregate against the simple sum:
+
+```{r shot-plot, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(path = if (knitr::is_latex_output()) "figures/app-plot.jpg" else "figures/app-plot.webp")
+```
+
+the comparison of the methods:
+
+```{r shot-compare, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(path = if (knitr::is_latex_output()) "figures/app-compare.jpg" else "figures/app-compare.webp")
+```
+
+and the weights of the components:
+
+```{r shot-usercost, echo = FALSE, out.width = "100%"}
+knitr::include_graphics(path = if (knitr::is_latex_output()) "figures/app-usercost.jpg" else "figures/app-usercost.webp")
+```
+
+# Reproducibility
+
+For the settings of the screenshots, the R code tab shows:
+
+```{r code}
+settings <-
+  list(
+      source  = "example"
+    , method  = "Barnett"
+    , logbase = "e"
+    , date    = "Date"
+    , x       = paste0("x", 1:8)
+    , r       = paste0("r", 1:8)
+    , bench   = "rb"
+    , percent = TRUE
+    , base    = 100
+    )
+cat(dmai:::.dmai_app_code(input = settings))
+```
+
+The indexes are deterministic, so the code returns the same numbers as the application.
+
+# Deploying
+
+`dmai_app_object()` returns the application object without running it, for a server:
+
+```{r deploy, eval = FALSE}
+# app.R on a Shiny server
+dmai::dmai_app_object()
+```
+
+# References
+
+Barnett, W. A. (1980). Economic monetary aggregates: an application of index number and aggregation theory.
+*Journal of Econometrics*, 14(1), 11--48.

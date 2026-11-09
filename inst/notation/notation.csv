@@ -1,0 +1,22 @@
+symbol,text,kind,meaning,argument
+"n",n,scalar,"number of components",x
+"T",T,scalar,"number of dates",.data
+"i, j",i j,index,"components",
+"t",t,index,"dates",date
+"x_{it}",x_it,scalar,"quantity of component i at date t",x
+"r_{it}",r_it,scalar,"rate of return of component i at date t",r
+"R_t",R_t,scalar,"benchmark rate at date t",benchmark
+"\pi_{it}",pi_it,scalar,"user cost of component i: (R_t - r_it) / (1 + R_t)",user_cost
+"s_{it}",s_it,scalar,"share of component i in the expenditure on monetary services",
+"\bar{s}_{it}",sbar_it,scalar,"average of the shares at t - 1 and t",
+"\mathbf{x}_t",x_t,vector,"quantities of the components at date t",x
+"\boldsymbol{\pi}_t",pi_t,vector,"user costs at date t",user_cost
+"\mathbf{s}_t",s_t,vector,"expenditure shares at date t",
+"\mathbf{X}",X,matrix,"T x n matrix of quantities (dates in rows)",x
+"Q_t",Q_t,scalar,"index of the aggregate at date t (base at the first date)",base
+"V_t",V_t,scalar,"aggregate in the units of x (equal to the simple sum at the first date)",
+"E_t",E_t,scalar,"expenditure on monetary services: sum_i pi_it x_it",
+"P_t",P_t,scalar,"dual user-cost price index: E_t / V_t",
+"\kappa_t",kappa_t,scalar,"Divisia mean of the growth of the components",
+"K_t",K_t,scalar,"Divisia variance of the growth of the components",
+"\Delta",Delta,operator,"first difference over dates",

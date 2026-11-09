@@ -1,0 +1,208 @@
+---
+title: "Benchmark rate and index formula"
+author: "Muhammad Yaseen"
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    toc: true
+    toc-depth: 3
+    highlight-style: pygments
+    code-tools: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Benchmark rate and index formula}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+{{< include _dmai-macros.txt >}}
+
+```{r setup, include = FALSE}
+# HTML figures are drawn as PNG and kept as WebP: lossless, or lossy at quality 90 when that is less than half the
+# size. The PDF figures stay vector graphics. Any failure of magick (not installed, no WebP, or a broken
+# installation whose system libraries are missing) keeps the PNG
+webp <- function(path) {
+  if (knitr::is_latex_output() || !grepl(pattern = "[.]png$", x = path)) return(path)
+  tryCatch(
+      {
+        if (!requireNamespace("magick", quietly = TRUE) || !isTRUE(magick::magick_config()$webp)) return(path)
+        img <- magick::image_read(path)
+        out <- sub(pattern = "[.]png$", replacement = ".webp", x = path)
+        tmp <- tempfile(fileext = ".webp")
+        magick::image_write(
+            image   = img
+          , path    = out
+          , format  = "webp"
+          , quality = 100
+          , defines = c(`webp:lossless` = "true")
+          )
+        magick::image_write(image = img, path = tmp, format = "webp", quality = 90)
+        if (file.size(tmp) < file.size(out) / 2) file.copy(from = tmp, to = out, overwrite = TRUE)
+        unlink(c(path, tmp))
+        out
+      }
+    , error = function(e) path
+    )
+}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", fig.width = 7, fig.height = 4.2,
+                      dev = if (knitr::is_latex_output()) "cairo_pdf" else "ragg_png", dpi = 96,
+                      fig.process = webp)
+if (requireNamespace("dmai", quietly = TRUE)) library(dmai) else
+  pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+```
+
+# Abstract
+
+A Divisia aggregate depends on two choices besides the data: the benchmark rate that prices the user costs, and the
+index formula. This vignette shows on the simulated data `money_sim` how much each matters, and when the Divisia
+aggregate and the simple sum part ways.
+
+# The benchmark rate
+
+```{r bench}
+data(money_sim)
+bench <- list(
+    `largest component rate` = NULL
+  , `bond yield (rb)`        = "rb"
+  , `bond yield + 1 point`   = money_sim$rb + 1
+  , `bond yield + 3 points`  = money_sim$rb + 3
+  )
+growth <-
+  vapply(
+      X         = bench
+    , FUN       = function(b) {
+        d <-
+          dmai(
+              .data     = money_sim
+            , method    = "Barnett"
+            , logbase   = NULL
+            , date      = "Date"
+            , x         = NULL
+            , r         = NULL
+            , user_cost = NULL
+            , benchmark = b
+            , percent   = TRUE
+            , base      = 100
+            , as_dt     = TRUE
+            )
+        100 * ((d$index[nrow(d)] / d$index[1L])^(12 / (nrow(d) - 1)) - 1)
+      }
+    , FUN.VALUE = numeric(length = 1)
+    )
+round(x = growth, digits = 2)
+```
+
+With the largest component rate as the benchmark the aggregate grows `r round(growth[[1]], 1)`% a year, against
+`r round(growth[[2]], 1)`% with the bond yield. The component with the largest rate, the time deposits over one year,
+then has a user cost of zero at most dates and almost no weight, although it grows fastest. A benchmark above every
+component rate gives every component some weight; raising it further raises the weights of the interest-bearing
+deposits (their user costs rise proportionally more than that of currency), so the aggregate moves towards the
+simple sum.
+
+```{r bench-weights}
+w <- function(b) {
+  u <-
+    dmai_user_cost(
+        .data     = money_sim
+      , date      = "Date"
+      , x         = NULL
+      , r         = NULL
+      , benchmark = b
+      , percent   = TRUE
+      )$components
+  u[, .(share = mean(share)), by = component]
+}
+merge(w(NULL), w("rb"), by = "component", suffixes = c("_largest_rate", "_bond_yield"))
+```
+
+# The index formula
+
+```{r methods}
+cmp <-
+  dmai_compare(
+      .data     = money_sim
+    , methods   = c("Barnett", "Hancock", "Fisher", "SimpleSum", "CE")
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    )
+cmp$summary
+plot(
+    x     = cmp
+  , which = "growth"
+  )
+```
+
+Divisia and Fisher differ by less than a thousandth of the index; the choice between superlative formulas hardly
+matters. The simple-sum aggregate grows about one and a half points a year faster. The currency equivalent index
+moves with the level of the rates: when the benchmark falls, the deposits count as more money-like and the index
+jumps.
+
+# When the simple sum misleads
+
+The gap between the growth of the simple sum and of the Divisia aggregate comes from the components that grow
+faster or slower than the others. The Divisia second moment measures that spread:
+
+```{r gap}
+fit <-
+  dmai(
+      .data     = money_sim
+    , method    = c("Barnett", "Hancock", "Fisher", "SimpleSum", "CE")
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    , as_dt     = FALSE
+    )
+gap <- fit$simple_sum$growth - fit$index$DMAI
+sd  <-
+  dmai_moments(
+      .data = fit
+    )$moments$sd
+cor(x = abs(gap), y = sd, use = "complete.obs")
+```
+
+```{r gap-plot}
+d <- data.table::data.table(Date = fit$index$Date, gap = gap, sd = sd)[!is.na(gap)]
+ggplot2::ggplot(data = d, mapping = ggplot2::aes(x = sd, y = abs(gap))) +
+  ggplot2::geom_point(colour = "#1f4e9e", alpha = 0.6) +
+  ggplot2::labs(x = "Divisia standard deviation of component growth (percent)",
+                y = "|simple sum - Divisia growth| (points)") +
+  dmai_theme(
+      base_size       = 11
+    , base_family     = "serif"
+    , ticks_inward    = TRUE
+    , legend_position = "bottom"
+    )
+```
+
+The correlation is `r round(cor(abs(gap), sd, use = "complete.obs"), 2)`: months with a larger spread of component
+growth tend to be months in which the two aggregates disagree more, the diagnostic of Barnett and Serletis (1990).
+In these simulated data much of the gap is the steady trend difference between the components, which the spread of
+a single month does not capture.
+
+# References
+
+Barnett, W. A. (1980). Economic monetary aggregates: an application of index number and aggregation theory.
+*Journal of Econometrics*, 14(1), 11--48.
+
+Barnett, W. A. and Serletis, A. (1990). A dispersion-dependency diagnostic test for aggregation error: with
+applications to monetary economics and income distribution. *Journal of Econometrics*, 43(1--2), 5--34.
+
+Rotemberg, J. J., Driscoll, J. C. and Poterba, J. M. (1995). Money, output, and prices: evidence from a new monetary
+aggregate. *Journal of Business and Economic Statistics*, 13(1), 67--83.

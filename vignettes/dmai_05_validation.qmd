@@ -1,0 +1,228 @@
+---
+title: "Validation and speed"
+author: "Muhammad Yaseen"
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    toc: true
+    toc-depth: 3
+    highlight-style: pygments
+    code-tools: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Validation and speed}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+{{< include _dmai-macros.txt >}}
+
+```{r setup, include = FALSE}
+# HTML figures are drawn as PNG and kept as WebP: lossless, or lossy at quality 90 when that is less than half the
+# size. The PDF figures stay vector graphics. Any failure of magick (not installed, no WebP, or a broken
+# installation whose system libraries are missing) keeps the PNG
+webp <- function(path) {
+  if (knitr::is_latex_output() || !grepl(pattern = "[.]png$", x = path)) return(path)
+  tryCatch(
+      {
+        if (!requireNamespace("magick", quietly = TRUE) || !isTRUE(magick::magick_config()$webp)) return(path)
+        img <- magick::image_read(path)
+        out <- sub(pattern = "[.]png$", replacement = ".webp", x = path)
+        tmp <- tempfile(fileext = ".webp")
+        magick::image_write(
+            image   = img
+          , path    = out
+          , format  = "webp"
+          , quality = 100
+          , defines = c(`webp:lossless` = "true")
+          )
+        magick::image_write(image = img, path = tmp, format = "webp", quality = 90)
+        if (file.size(tmp) < file.size(out) / 2) file.copy(from = tmp, to = out, overwrite = TRUE)
+        unlink(c(path, tmp))
+        out
+      }
+    , error = function(e) path
+    )
+}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", fig.width = 7, fig.height = 4.2,
+                      dev = if (knitr::is_latex_output()) "cairo_pdf" else "ragg_png", dpi = 96,
+                      fig.process = webp)
+if (requireNamespace("dmai", quietly = TRUE)) library(dmai) else
+  pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+```
+
+# Abstract
+
+This vignette sets out how the results of the package are checked: against version 0.5.0, against the published
+index numbers of the Consumer Price Index Manual, against the identities the formulas must satisfy, and it ends with
+timings against version 0.5.0.
+
+# Against version 0.5.0
+
+The example of version 0.5.0, run with a seed, was saved before the rewrite (`dev/legacy`), and the test
+`test-legacy.R` compares the new results with it. With `logbase = 10` (the default of 0.5.0) and with
+`logbase = 2` or $e$, and for the Hancock method, `DMAI` agrees to $10^{-10}$. The one change is the default
+logarithm: 0.5.0 used base 10, so its default `DMAI` was $1/\log 10 \approx 0.434$ times the growth rate; 1.0.0 uses
+the natural logarithm, and the ratio of the two is $\log 10 \approx 2.303$:
+
+```{r legacy}
+data(money_sim)
+new <-
+  dmai(
+      .data     = money_sim
+    , method    = c("Barnett", "Hancock", "Fisher", "SimpleSum", "CE")
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    , as_dt     = TRUE
+    )
+old <-
+  dmai(
+      .data     = money_sim
+    , method    = c("Barnett", "Hancock", "Fisher", "SimpleSum", "CE")
+    , logbase   = 10
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    , as_dt     = TRUE
+    )
+head(
+    data.table::data.table(
+        Date    = new$Date
+      , natural = new$DMAI
+      , base10  = old$DMAI
+      , ratio   = new$DMAI / old$DMAI
+      )
+  )
+```
+
+# Against published index numbers
+
+A Divisia quantity index is the index of Tornqvist with the user costs in the place of prices; the formula is
+symmetric in prices and quantities, so with the prices as `x` and the quantities as `user_cost` the package computes
+a Tornqvist price index. The Consumer Price Index Manual (ILO et al. 2004, Chapter 19) gives the chained Laspeyres,
+Paasche, Fisher and Tornqvist price indexes of an artificial data set, shipped as `cpi_ch19`:
+
+```{r cpi}
+data(cpi_ch19)
+cpi_ch19
+tor <-
+  dmai(
+      .data     = cpi_ch19
+    , method    = "Barnett"
+    , logbase   = NULL
+    , date      = "period"
+    , x         = paste0("p", 1:6)
+    , r         = NULL
+    , user_cost = paste0("q", 1:6)
+    , benchmark = NULL
+    , percent   = TRUE
+    , base      = 1
+    , as_dt     = TRUE
+    )
+fis <-
+  dmai(
+      .data     = cpi_ch19
+    , method    = "Fisher"
+    , logbase   = NULL
+    , date      = "period"
+    , x         = paste0("p", 1:6)
+    , r         = NULL
+    , user_cost = paste0("q", 1:6)
+    , benchmark = NULL
+    , percent   = TRUE
+    , base      = 1
+    , as_dt     = FALSE
+    )
+data.table::data.table(
+    period    = 1:5
+  , laspeyres = round(x = cumprod(c(1, fis$fisher$laspeyres[-1])), digits = 4)
+  , paasche   = round(x = cumprod(c(1, fis$fisher$paasche[-1])), digits = 4)
+  , fisher    = round(x = fis$index$index, digits = 4)
+  , tornqvist = round(x = tor$index, digits = 4)
+  )
+```
+
+The Manual prints (Tables 19.5 and 19.11): Laspeyres 1.4200, 1.3646, 1.3351, 1.3306; Paasche 1.3823, 1.2740,
+1.2060, 1.1234; Fisher 1.4011, 1.3185, 1.2689, 1.2226; Tornqvist 1.4052, 1.3112, 1.2624, 1.2224. Every value agrees
+to the printed digits except the Paasche index of period 2, $14.10/10.20 = 1.38235$, printed as 1.3823. Each value is
+a row of `inst/extdata/reference.csv`, checked at every `R CMD check`:
+
+```{r reference}
+ref <-
+  dmai_reference(
+      source   = NULL
+    , evaluate = TRUE
+    , level    = 1
+    )
+ref[, .(id, value, computed = round(x = computed, digits = 5), agrees)]
+```
+
+# Identities
+
+The tests also check that
+
+* the Divisia, Fisher, Hancock, simple-sum and currency equivalent indexes equal their formulas computed by hand on
+  a small example;
+* price times quantity is the expenditure (factor reversal), and the implicit price index of the Fisher quantity
+  index is the Fisher price index of the user costs;
+* the shares sum to one at every date, and do not change when the rates are given as decimals instead of percent;
+* the Divisia mean of `dmai_moments()` is the Divisia growth, and the variance is never negative;
+* the order of the rows and the names of the columns do not change the result.
+
+For example, factor reversal:
+
+```{r reversal}
+f <-
+  dmai(
+      .data     = money_sim
+    , method    = "Fisher"
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    , as_dt     = FALSE
+    )
+max(abs(f$price$price * f$index$value - f$price$expenditure))
+```
+
+# Speed
+
+Version 0.5.0 reshaped the data to a long table with tidyr and computed with grouped dplyr operations; version
+1.0.0 works on the matrix of quantities. The timings below were taken by `tools/bench.R` on simulated data
+(median of 20 runs, milliseconds) and are stored with the package:
+
+```{r bench}
+b <- data.table::fread(system.file("extdata", "bench.csv", package = "dmai"))
+w <- data.table::dcast(data = b, formula = case ~ version, value.var = "median_ms")
+v <- sort(unique(b$version))
+w[, speedup := round(x = get(v[1]) / get(v[2]), digits = 1)]
+w
+```
+
+The cases are 36 dates of 13 components (the example of version 0.5.0), 240 dates of 8 components and 600 dates of
+20 components.
+
+# References
+
+ILO, IMF, OECD, UNECE, Eurostat and The World Bank (2004). *Consumer Price Index Manual: Theory and Practice*.
+International Labour Office, Geneva.

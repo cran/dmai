@@ -1,25 +1,45 @@
 Package: dmai
 Type: Package
 Title: Divisia Monetary Aggregates Index
-Version: 0.5.0
+Version: 1.0.0
+Date: 2026-11-05
 Authors@R: c(
-              person(c("Muhammad", "Yaseen"),  email = "myaseen208@gmail.com", role = c("aut", "cre"))
-            , person(c("Ahmad",  "Nadeem"),  email = "Ahmed.Nadeem@sbp.org.pk", role = c("aut", "ctb"))
-            )
-Author: Muhammad Yaseen [aut, cre],
+      person("Muhammad", "Yaseen", email = "myaseen208@gmail.com", role = c("aut", "cre", "cph"),
+             comment = c(ORCID = "0000-0002-5923-1714"))
+    , person("Ahmad", "Nadeem", email = "Ahmed.Nadeem@sbp.org.pk", role = c("aut", "ctb"))
+    )
+Description: Builds monetary aggregates from their components by the methods
+    of index number theory. The Divisia index of Barnett (1980)
+    <doi:10.1016/0304-4076(80)90070-6> weights every component (currency,
+    demand deposits, savings and time deposits, ...) by its share in the
+    expenditure on monetary services, priced by its user cost (Barnett 1978)
+    <doi:10.1016/0165-1765(78)90051-4>. Also gives the Fisher ideal index, a
+    variant with simple growth rates, the simple-sum aggregate, the currency
+    equivalent index of Rotemberg, Driscoll and Poterba (1995), the dual
+    user-cost price index and the Divisia second moments of Barnett and
+    Serletis (1990) <doi:10.1016/0304-4076(90)90104-2>; benchmark rates
+    given or taken from the components (upper envelope); 'ggplot2'
+    graphics, a plain-language interpretation of every result and a built-in
+    'shiny' application.
+License: GPL-2
+URL: https://myaseen208.com/dmai/, https://github.com/myaseen208/dmai
+BugReports: https://github.com/myaseen208/dmai/issues
+Encoding: UTF-8
+Language: en-US
+LazyData: true
+Depends: R (>= 4.2)
+Imports: data.table, ggplot2, grDevices, scales, stats, utils
+Suggests: bslib, DT, knitr, magick, pkgload, quarto, ragg, R.rsp,
+        shiny, svglite, testthat (>= 3.0.0), withr
+VignetteBuilder: quarto, R.rsp
+Config/testthat/edition: 3
+Config/skill/prefix: dmai
+RoxygenNote: 7.3.1
+NeedsCompilation: no
+Packaged: 2026-11-09 02:01:43 UTC; myaseen208
+Author: Muhammad Yaseen [aut, cre, cph] (ORCID:
+    <https://orcid.org/0000-0002-5923-1714>),
   Ahmad Nadeem [aut, ctb]
 Maintainer: Muhammad Yaseen <myaseen208@gmail.com>
-Description: Functions to calculate Divisia monetary aggregates index as given in Barnett, W. A. (1980) (<DOI:10.1016/0304-4076(80)90070-6>).
-Depends: R (>= 3.1)
-Imports: dplyr, magrittr, ggplot2, stringr, tibble, tidyr
-License: GPL-2
-URL: https://github.com/myaseen208/dmai/, https://myaseen208.com/dmai/
-Encoding: UTF-8
-RoxygenNote: 7.3.1
-Note: School of Mathematical and Statistical Sciences, Clemson
-        University, Clemson, South Carolina, USA.
-Suggests: testthat
-NeedsCompilation: no
-Packaged: 2024-03-23 23:26:11 UTC; myaseen208
 Repository: CRAN
-Date/Publication: 2024-03-23 23:40:02 UTC
+Date/Publication: 2026-11-09 08:50:17 UTC

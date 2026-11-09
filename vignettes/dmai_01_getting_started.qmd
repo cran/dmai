@@ -1,0 +1,197 @@
+---
+title: "Getting started with dmai"
+author: "Muhammad Yaseen"
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    toc: true
+    toc-depth: 3
+    highlight-style: pygments
+    code-tools: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Getting started with dmai}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+{{< include _dmai-macros.txt >}}
+
+```{r setup, include = FALSE}
+# HTML figures are drawn as PNG and kept as WebP: lossless, or lossy at quality 90 when that is less than half the
+# size. The PDF figures stay vector graphics. Any failure of magick (not installed, no WebP, or a broken
+# installation whose system libraries are missing) keeps the PNG
+webp <- function(path) {
+  if (knitr::is_latex_output() || !grepl(pattern = "[.]png$", x = path)) return(path)
+  tryCatch(
+      {
+        if (!requireNamespace("magick", quietly = TRUE) || !isTRUE(magick::magick_config()$webp)) return(path)
+        img <- magick::image_read(path)
+        out <- sub(pattern = "[.]png$", replacement = ".webp", x = path)
+        tmp <- tempfile(fileext = ".webp")
+        magick::image_write(
+            image   = img
+          , path    = out
+          , format  = "webp"
+          , quality = 100
+          , defines = c(`webp:lossless` = "true")
+          )
+        magick::image_write(image = img, path = tmp, format = "webp", quality = 90)
+        if (file.size(tmp) < file.size(out) / 2) file.copy(from = tmp, to = out, overwrite = TRUE)
+        unlink(c(path, tmp))
+        out
+      }
+    , error = function(e) path
+    )
+}
+knitr::opts_chunk$set(collapse = FALSE, comment = "", fig.width = 7, fig.height = 4.2,
+                      dev = if (knitr::is_latex_output()) "cairo_pdf" else "ragg_png", dpi = 96,
+                      fig.process = webp)
+if (requireNamespace("dmai", quietly = TRUE)) library(dmai) else
+  pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+```
+
+# Abstract
+
+This vignette shows the package at work: the data it expects, the Divisia monetary aggregate of Barnett (1980) with
+its user costs and weights, the other methods, and the plain-language reading of a result. The example data are
+**simulated**; the vignette "Theory" gives the formulas and "Validation" shows that they reproduce published values.
+
+# The data
+
+`dmai()` takes a data frame with one row per date: a date column, the quantities of the components and their rates
+of return. By default the columns are named `Date`, `x1`, `x2`, ... and `r1`, `r2`, ..., as in version 0.5.0;
+`date`, `x` and `r` name other columns. `money_sim` holds simulated monthly data from 2005 to 2024: eight components
+(currency, demand deposits, savings deposits, four maturities of time deposits and foreign currency deposits), their
+rates in percent and a benchmark rate `rb`, a long bond yield.
+
+```{r data}
+data(money_sim)
+head(money_sim[, c("Date", "x1", "x2", "x3", "r1", "r2", "r3", "rb")])
+```
+
+# The Divisia aggregate
+
+The services of money are priced by the user cost: the interest given up by holding an asset instead of a
+benchmark asset that yields no monetary services. Currency pays no interest, so its user cost is the whole
+benchmark rate; a time deposit that pays nearly the benchmark rate costs little to hold and is held mostly as a
+store of value.
+
+```{r fit}
+fit <-
+  dmai(
+      .data     = money_sim
+    , method    = "Barnett"
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    , as_dt     = FALSE
+    )
+fit
+```
+
+`DMAI` is the growth from the previous date in percent (the log difference times 100), `index` the aggregate with
+100 at the first date and `value` the aggregate in the units of the components, equal to the simple sum at the first
+date. With `as_dt = TRUE` (the default) `dmai()` returns only that table, as version 0.5.0 did.
+
+```{r fit-plot}
+plot(
+    x     = fit
+  , which = "index"
+  )
+```
+
+The Divisia aggregate grows more slowly than the simple sum here because the interest-bearing deposits grow fastest
+and they carry small weights. The weights over time:
+
+```{r shares}
+plot(
+    x     = fit
+  , which = "shares"
+  )
+```
+
+# Reading the result
+
+```{r interpret}
+dmai_interpret(
+    x   = fit
+  , top = 3
+  )
+```
+
+# The other methods
+
+`dmai_compare()` computes every method on the same data:
+
+```{r compare}
+cmp <-
+  dmai_compare(
+      .data     = money_sim
+    , methods   = c("Barnett", "Hancock", "Fisher", "SimpleSum", "CE")
+    , logbase   = NULL
+    , date      = "Date"
+    , x         = NULL
+    , r         = NULL
+    , user_cost = NULL
+    , benchmark = "rb"
+    , percent   = TRUE
+    , base      = 100
+    )
+cmp
+plot(
+    x     = cmp
+  , which = "index"
+  )
+```
+
+The Divisia and Fisher indexes nearly coincide: both are superlative indexes (Diewert 1976). The Hancock variant
+uses simple instead of log growth rates and drifts above them; the currency equivalent index moves with the rates.
+
+# User costs and second moments
+
+```{r user-cost}
+dmai_user_cost(
+    .data     = money_sim
+  , date      = "Date"
+  , x         = NULL
+  , r         = NULL
+  , benchmark = "rb"
+  , percent   = TRUE
+  )
+```
+
+```{r moments}
+m <-
+  dmai_moments(
+      .data = fit
+    )
+plot(x = m)
+```
+
+# Your own data
+
+A CSV file with one row per date can be read with `data.table::fread()`; give the column names with `date`, `x` and
+`r`, and the benchmark with `benchmark` (a column, a number or one value per date). Without a benchmark the largest
+component rate is used at each date, as in version 0.5.0; that component then has a user cost of zero and no weight,
+so a benchmark above every component rate is the better choice. `dmai_app()` does all of this without code.
+
+# References
+
+Barnett, W. A. (1978). The user cost of money. *Economics Letters*, 1(2), 145--149.
+
+Barnett, W. A. (1980). Economic monetary aggregates: an application of index number and aggregation theory.
+*Journal of Econometrics*, 14(1), 11--48.
+
+Diewert, W. E. (1976). Exact and superlative index numbers. *Journal of Econometrics*, 4(2), 115--145.
